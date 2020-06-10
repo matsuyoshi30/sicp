@@ -224,3 +224,48 @@ size ; 2
 (define (even? n)
   (= (remainder n 2) 0))
 ;; 空間、ステップ数ともに対数的な増加となる
+
+;;; 1.2.5 Greatest Common Divisors
+;; Euclid's algorithm
+;; GCD(206, 40) = GCD(40, 6)
+;;              = GCD(6, 4)
+;;              = GCD(4, 2)
+;;              = GCD(2, 0)
+;;              = 2
+(define (gcd a b)
+  (if (= b 0)
+      a
+      (gcd b (remainder a b))))
+;; ref) Lameの定理
+
+;;; 1.2.6 Example: testing for primality
+;; 約数を探すパターン
+(define (smallest-divisor n) (find-divisor n 2))
+(define (find-divisor n test-divisor)
+  (cond ((> (square test-divisor) n) n)
+        ((divide? test-divisor n) test-divisor)
+        (else (find-divisor n (+ test-divisor 1)))))
+(define (devide? a b)
+  (= (remainder a b) 0))
+
+(define (prime n)
+  (= (smallest-divisor n) n))
+;; -> O(root-n)の増加オーダー
+;; フェルマーの少定理を使用するパターン
+;; nが素数で、aがnより小さい任意の正の整数であるとき、aのn乗は法nに関してaと合同
+(define (expmod base exp m)
+  (cond ((= exp 0) 1)
+        ((even? exp)
+         (remainder (square (expmod base (/ exp 2) m)) m))
+        (else
+         (remainder (* base (expmod base (- exp 1) m)) m))))
+(define (fermat-test n)
+  (define (try-it a)
+    (= (expmod a n n) a))
+  (try-it (+ 1 (random (- n 1)))))
+;; 与えられたtimes分フェルマーテストを実行する -> 確率的手法（times分実行して素数と判定されても正しいとは限らない）
+(define (fast-prime? n times)
+  (cond ((= times 0) true)
+        ((fermat-test n) (fast-prime? n (- times 1)))
+        (else false)))
+;; フェルマーテストを騙す数 = カーマイケル数
