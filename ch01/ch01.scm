@@ -245,7 +245,7 @@ size ; 2
   (cond ((> (square test-divisor) n) n)
         ((divide? test-divisor n) test-divisor)
         (else (find-divisor n (+ test-divisor 1)))))
-(define (devide? a b)
+(define (divide? a b)
   (= (remainder a b) 0))
 
 (define (prime n)
