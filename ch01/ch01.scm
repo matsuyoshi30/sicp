@@ -251,7 +251,7 @@ size ; 2
 (define (prime n)
   (= (smallest-divisor n) n))
 ;; -> O(root-n)の増加オーダー
-;; フェルマーの少定理を使用するパターン
+;; フェルマーの小定理を使用するパターン
 ;; nが素数で、aがnより小さい任意の正の整数であるとき、aのn乗は法nに関してaと合同
 (define (expmod base exp m)
   (cond ((= exp 0) 1)
