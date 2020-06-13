@@ -526,3 +526,30 @@
 (cmike? 2465) ; #t
 (cmike? 2821) ; #t
 (cmike? 6601) ; #t
+
+;;; 1.28
+(define (square n) (* n n))
+(define (check-square-expmod m n)
+  ;; 法nに関して自明でない1の平方根を見つけたかチェック
+  (if (and (not (= m 1))
+           (not (= m (- n 1)))
+           (= (remainder (square m) n) 1))
+      0
+      (remainder (square m) n)))
+(define (expmod base exp m)
+  (cond ((= exp 0) 1)
+        ((even? exp)
+         (check-square-expmod (expmod base (/ exp 2) m) m))
+        (else
+         (remainder (* base (expmod base (- exp 1) m)) m))))
+
+(define (miller-rabin-test n)
+  (define (try-it a)
+    (= (expmod a (- n 1) n) 1))
+  (try-it (+ 1 (random (- n 1)))))
+
+(define (random x)
+  (modulo (sys-random) x))
+
+(miller-rabin-test 559) ; #f
+(miller-rabin-test 561) ; #f
