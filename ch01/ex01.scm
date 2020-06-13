@@ -488,3 +488,18 @@
          (remainder (* base (expmod base (- exp 1) m)) m))))
 
 ;; ステップごとに remainder が適用されるので、 exp が大きな値でも計算が完了する
+
+;;; 1.26
+;; Louis's code
+(define (expmod base exp m)
+  (cond ((= exp 0) 1)
+        ((even? exp)
+         (remainder (* (expmod base (/ exp 2) m)
+                       (expmod base (/ exp 2) m))
+                    m)
+         (else (remainder (* base (expmod base (- exp 1) m))
+                          m)))))
+;; (square (expmod base (/ exp 2) m)) が
+;; (* (expmod base (/ exp 2) m) (expmod base (/ exp 2) m))
+;; になっているので、 expmod の呼び出しが倍になっているので、
+;; プロセスは O(logN^2) => O(N) となる
