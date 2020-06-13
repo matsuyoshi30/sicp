@@ -503,3 +503,26 @@
 ;; (* (expmod base (/ exp 2) m) (expmod base (/ exp 2) m))
 ;; になっているので、 expmod の呼び出しが倍になっているので、
 ;; プロセスは O(logN^2) => O(N) となる
+
+;;; 1.27
+(define (square n) (* n n))
+(define (expmod base exp m)
+  (cond ((= exp 0) 1)
+        ((even? exp)
+         (remainder (square (expmod base (/ exp 2) m)) m))
+        (else
+         (remainder (* base (expmod base (- exp 1) m)) m))))
+
+(define (cmike? n)
+  (define (try-it n a)
+    (cond ((= a 1) #t) ;; cmike!
+          ((not (= (expmod a n n) a)) #f) ;; not cmike
+          (else (try-it n (- a 1)))))
+  (try-it n (- n 1)))
+;; n が素数であるかを n-1 からデクリメントしながらフェルマーの少定理を使用してテストしていく
+(cmike? 561)  ; #t
+(cmike? 1105) ; #t
+(cmike? 1729) ; #t
+(cmike? 2465) ; #t
+(cmike? 2821) ; #t
+(cmike? 6601) ; #t
