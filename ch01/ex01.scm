@@ -466,3 +466,25 @@
 (timed-prime-test 1000003) ; 1000003 *** 236#<undef>
 (timed-prime-test 1000033) ; 1000033 *** 331#<undef>
 (timed-prime-test 1000037) ; 1000037 *** 199#<undef>
+
+;;; 1.25
+(define (expmod2 base exp m)
+  (remainder (fast-expt base exp) m))
+(define (fast-expt b n)
+  (cond ((= n 0) 1)
+        ((even? n) (square (fast-expt b (/ n 2))))
+        (else (* b (fast-expt b (- n 1))))))
+(define (even? n)
+  (= (remainder n 2) 0))
+
+;; fast-expt を使用する場合、base^exp の計算結果に対して remainder を適用する
+;; => exp が大きな値の場合、ステップ数が多く必要になるので終わらない
+
+(define (expmod base exp m)
+  (cond ((= exp 0) 1)
+        ((even? exp)
+         (remainder (square (expmod base (/ exp 2) m)) m))
+        (else
+         (remainder (* base (expmod base (- exp 1) m)) m))))
+
+;; ステップごとに remainder が適用されるので、 exp が大きな値でも計算が完了する
