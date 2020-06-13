@@ -313,3 +313,156 @@
 ;; (if (= 2 0) 4 (gcd 2 0)) #f
 ;; (if (= 0 0) 2 (gcd 0 (% 2 0))) #t
 ; => 2
+
+;;; 1.21
+(define (smallest-divisor n) (find-divisor n 2))
+(define (square n) (* n n))
+(define (find-divisor n test-divisor)
+  (cond ((> (square test-divisor) n) n)
+        ((divide? n test-divisor) test-divisor)
+        (else (find-divisor n (+ test-divisor 1)))))
+(define (divide? a b)
+  (= (remainder a b) 0))
+
+(smallest-divisor 199)   ; 199
+(smallest-divisor 1999)  ; 1999
+(smallest-divisor 19999) ; 7
+
+;;; 1.22
+(define (prime? n)
+  (= (smallest-divisor n) n))
+
+; https://github.com/suzuken/sicp/blob/master/chapter1/q1.22.scm#L18
+(define (runtime)
+  (use srfi-11)
+  (let-values (((a b) (sys-gettimeofday)))
+              (+ (* a 1000000) b)))
+
+(define (timed-prime-test n)
+  (newline)
+  (display n)
+  (start-prime-test n (runtime)))
+(define (start-prime-test n start-time)
+  (if (prime? n)
+      (report-prime (- (runtime) start-time))))
+(define (report-prime elapsed-time)
+  (display " *** ")
+  (display elapsed-time))
+
+(define (search-for-primes a b)
+  (search-for-primes-iter a b))
+
+(define (search-for-primes-iter a b)
+  (if (= (remainder a 2) 0)
+      (search-for-primes (+ a 1) b)
+      (if (prime? a)
+          (timed-prime-test a)
+          (search-for-primes (+ a 2) b))))
+
+(search-for-primes 1000 1050)       ; 1009 *** 10#<undef>
+(search-for-primes 10000 10050)     ; 10007 *** 44#<undef>
+(search-for-primes 100000 100050)   ; 100003 *** 112#<undef>
+(search-for-primes 1000000 1000050) ; 1000003 *** 299#<undef>
+;; 1009  -> 10007   : 44/10  = 4.4
+;; 10007 -> 1000003 : 112/44 = 2.5454545454545454
+;; (sqrt 10) : 3.1622776601683795
+;; 実行するごとに runtime 結果が変わるのでなんとも言えない
+
+;;; 1.23
+(define (smallest-divisor n) (find-divisor2 n 2))
+(define (square n) (* n n))
+
+(define (find-divisor2 n test-divisor)
+  (cond ((> (square test-divisor) n) n)
+        ((divide? n test-divisor) test-divisor)
+        (else (find-divisor2 n (next test-divisor)))))
+
+(define (next n)
+  (if (= n 2)
+      3
+      (+ n 2)))
+
+(define (divide? a b)
+  (= (remainder a b) 0))
+
+(define (prime? n)
+  (= (smallest-divisor n) n))
+
+(define (runtime)
+  (use srfi-11)
+  (let-values (((a b) (sys-gettimeofday)))
+              (+ (* a 1000000) b)))
+
+(define (timed-prime-test n)
+  (display n)
+  (start-prime-test n (runtime)))
+(define (start-prime-test n start-time)
+  (if (prime? n)
+      (report-prime (- (runtime) start-time))))
+(define (report-prime elapsed-time)
+  (display " *** ")
+  (display elapsed-time))
+
+(timed-prime-test 1009)    ; 1009 *** 19#<undef>
+(timed-prime-test 1013)    ; 1013 *** 11#<undef>
+(timed-prime-test 1019)    ; 1019 *** 13#<undef>
+(timed-prime-test 10007)   ; 10007 *** 21#<undef>
+(timed-prime-test 10009)   ; 10009 *** 22#<undef>
+(timed-prime-test 10037)   ; 10037 *** 13#<undef>
+(timed-prime-test 100003)  ; 100003 *** 87#<undef>
+(timed-prime-test 100019)  ; 100019 *** 42#<undef>
+(timed-prime-test 100043)  ; 100043 *** 32#<undef>
+(timed-prime-test 1000003) ; 1000003 *** 93#<undef>
+(timed-prime-test 1000033) ; 1000033 *** 94#<undef>
+(timed-prime-test 1000037) ; 1000037 *** 93#<undef>
+
+;; 速くなったり遅くなったり。。。
+;; 1000037 のケースは繰り返すと155, 93と交互に出力された（なぜ）
+
+;;; 1.24
+(define (expmod base exp m)
+  (cond ((= exp 0) 1)
+        ((even? exp)
+         (remainder (square (expmod base (/ exp 2) m)) m))
+        (else
+         (remainder (* base (expmod base (- exp 1) m)) m))))
+(define (fermat-test n)
+  (define (try-it a)
+    (= (expmod a n n) a))
+  (try-it (+ 1 (random (- n 1)))))
+
+(define (fast-prime? n times)
+  (cond ((= times 0) true)
+        ((fermat-test n) (fast-prime? n (- times 1)))
+        (else false)))
+
+(define (prime? n)
+  (= (fast-prime? n) n))
+
+(define (runtime)
+  (use srfi-11)
+  (let-values (((a b) (sys-gettimeofday)))
+              (+ (* a 1000000) b)))
+
+(define (timed-prime-test n)
+  (display n)
+  (start-prime-test n (runtime)))
+(define (start-prime-test n start-time)
+  (if (prime? n)
+      (report-prime (- (runtime) start-time))))
+(define (report-prime elapsed-time)
+  (display " *** ")
+  (display elapsed-time))
+
+(timed-prime-test 1009)    ; 1009 *** 15#<undef>
+(timed-prime-test 1013)    ; 1013 *** 36#<undef>
+(timed-prime-test 1019)    ; 1019 *** 12#<undef>
+(timed-prime-test 10007)   ; 10007 *** 35#<undef>
+(timed-prime-test 10009)   ; 10009 *** 23#<undef>
+(timed-prime-test 10037)   ; 10037 *** 34#<undef>
+(timed-prime-test 100003)  ; 100003 *** 87#<undef>
+(timed-prime-test 100019)  ; 100019 *** 124#<undef>
+(timed-prime-test 100043)  ; 100043 *** 82#<undef>
+(timed-prime-test 1000003) ; 1000003 *** 236#<undef>
+(timed-prime-test 1000033) ; 1000033 *** 331#<undef>
+(timed-prime-test 1000037) ; 1000037 *** 199#<undef>
