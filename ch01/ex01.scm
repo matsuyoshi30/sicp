@@ -553,3 +553,204 @@
 
 (miller-rabin-test 559) ; #f
 (miller-rabin-test 561) ; #f
+
+;;; 1.29
+(define (integral2 f a b n)
+  (define h (/ (- b a) n))
+  (define (y k) (f (+ a (* k h))))
+  (define (add x) (+ x 1))
+  (define (integral2-term x)
+    (* (if (= (remainder x 2) 0) 2 4)
+       (y x)))
+  (/
+   (* (+ (y 0)
+         (sum integral2-term 1 add (- n 1))
+         (y n))
+      h)
+   3.0))
+
+(integral2 cube 0 1 100)  ; 0.25
+(integral2 cube 0 1 1000) ; 0.25
+
+;;; 1.30
+;; (define (<name> a b)
+;;    (if (> a b)
+;;        0
+;;        (+ (<term> a)
+;;           (<name> (<next> a) b))))
+(define (sum term a next b)
+  (if (> a b)
+      0
+      (+ (term a)
+         (sum term (next a) next b))))
+
+(define (inc x) (+ x 1))
+(define (cube x) (* x x x))
+(define (sum-cubes a b)
+  (sum cube a inc b))
+
+(sum-cubes 1 10) ; 3025
+;; (sum cube 1 inc 10)
+;; (if (> 1 10) 0 (+ (cube 1) (sum cube 2 inc 10)))
+;; (+ 1 (sum cube 2 inc 10))
+;; (+ 1 (if (> 2 10) 0 (+ (cube 2) (sum cube 3 inc 10))))
+;; (+ 1 8 (sum cube 3 inc 10))
+;; ...
+
+(define (sum-iter term a next b)
+  (define (iter a result)
+    (if (> a b)
+        result
+        (iter (next a) (+ (term a) result))))
+  (iter a 0))
+
+(define (sum-cubes-iter a b)
+  (sum-iter cube a inc b))
+
+(sum-cubes-iter 1 10) ; 3025
+;; (sum-iter cube 1 inc 10)
+;; (if (> 1 10) 0 (iter (inc 1) (+ (cube 1) 0)))
+;; (if (> 2 10) 1 (iter (inc 2) (+ (cube 2) 1)))
+;; (if (> 3 10) (+ 8 1)  (iter (inc 3) (+ (cube 3) (+ 8 1))))
+;; ...
+
+;;; 1.31
+;; 1.31 a
+(define (product term a next b)
+  (if (> a b)
+      1
+      (* (term a)
+         (product term (next a) next b))))
+
+(define (inc x) (+ x 1))
+(define (factorial n)
+  (define (term x) x)
+  (product term 1 inc n))
+
+(factorial 4)  ; 24
+(factorial 10) ; 3628800
+
+(define (pi-product n)
+  (define (term x)
+    (/ (* x (+ x 2.0))
+       (* (+ x 1.0) (+ x 1.0))))
+  (define (next x) (+ x 2))
+  (product term 2.0 next n))
+
+(* 4.0 (pi-product 30))   ; 3.191057433389645
+(* 4.0 (pi-product 100))  ; 3.157030176455167
+(* 4.0 (pi-product 1000)) ; 3.1431607055322752
+
+;; 1.31 b
+(define (product-iter term a next b)
+  (define (iter a result)
+    (if (> a b)
+        result
+        (iter (next a) (* (term a) result))))
+  (iter a 1))
+
+(define (factorial-iter n)
+  (define (term x) x)
+  (define (next x) (+ x 1))
+  (product-iter term 1 next n))
+
+(factorial-iter 4)  ; 24
+(factorial-iter 10) ; 3628800
+
+;;; 1.32
+;; 1.32 a
+(define (accumulate combiner null-value term a next b)
+  (if (> a b)
+      null-value
+      (combiner (term a)
+                (accumulate combiner null-value term (next a) next b))))
+
+(define (sum term a next b)
+  (define (combiner x y) (+ x y))
+  (accumulate combiner 0 term a next b))
+
+(define (inc x) (+ x 1))
+(define (cube x) (* x x x))
+(define (sum-cubes a b)
+  (sum cube a inc b))
+
+(sum-cubes 1 10) ; 3025
+
+(define (product term a next b)
+  (define (combiner x y) (* x y))
+  (accumulate combiner 1 term a next b))
+
+(define (inc x) (+ x 1))
+(define (factorial n)
+  (define (term x) x)
+  (product term 1 inc n))
+
+(factorial 4)  ; 24
+(factorial 10) ; 3628800
+
+;; 1.32 b
+(define (accumulate-iter combiner null-value term a next b)
+  (define (iter a result)
+    (if (> a b)
+        result
+        (iter (next a) (combiner (term a) result))))
+  (iter a null-value))
+
+(define (product-iter term a next b)
+  (define (combiner x y) (* x y))
+  (accumulate-iter combiner 1 term a next b))
+
+(define (inc x) (+ x 1))
+(define (factorial-iter n)
+  (define (term x) x)
+  (product-iter term 1 inc n))
+
+(factorial-iter 4)  ; 24
+(factorial-iter 10) ; 3628800
+
+;;; 1.33
+(define (filtered-accumulate filter combiner null-value term a next b)
+  (if (> a b)
+      null-value
+      (if (filter a)
+          (combiner (term a) (filtered-accumulate filter combiner null-value term (next a) next b))
+          (filtered-accumulate filter combiner null-value term (next a) next b))))
+
+;; 1.33 a
+(define (smallest-divisor n) (find-divisor n 2))
+(define (find-divisor n test-divisor)
+  (cond ((> (square test-divisor) n) n)
+        ((divide? n test-divisor) test-divisor)
+        (else (find-divisor n (+ test-divisor 1)))))
+(define (square x) (* x x))
+(define (divide? a b)
+  (= (remainder a b) 0))
+
+(define (prime? n)
+  (= (smallest-divisor n) n))
+
+(define (prime-sum a b)
+  (define (combiner x y) (+ x y))
+  (define (term x) (* x x))
+  (define (next x) (+ x 1))
+  (filtered-accumulate prime? combiner 0 term a next b))
+
+(prime-sum 3 10) ; 9+25+49=83
+
+;; 1.33 b
+(define (gcd a b)
+  (if (= b 0)
+      a
+      (gcd b (remainder a b))))
+
+(define (gcd-sum n)
+  (define (filter x)
+    (if (= (gcd x n) 1)
+        #t
+        #f))
+  (define (combiner x y) (* x y))
+  (define (term x) x)
+  (define (next x) (+ x 1))
+  (filtered-accumulate filter combiner 1 term 1 next n))
+
+(gcd-sum 10) ; 189

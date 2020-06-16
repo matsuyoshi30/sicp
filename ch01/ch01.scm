@@ -269,3 +269,73 @@ size ; 2
         ((fermat-test n) (fast-prime? n (- times 1)))
         (else false)))
 ;; フェルマーテストを騙す数 = カーマイケル数
+
+
+;;;; 1.3 Formulating Abstractions with Higher-Order Procedures
+
+;; 手続きを操作する手続き = 高階手続き
+
+;;; 1.3.1 Procedures as arguments
+;; a から b までの整数の和を計算
+(define (sum-integer a b)
+  (if (> a b)
+      0
+      (+ a (sum-integer (+ a 1) b))))
+;; a から b までの整数の三乗の和を計算
+(define (sum-cubes a b)
+  (if (> a b)
+      0
+      (+ (cube a)
+         (sum-cubes (+ a 1) b))))
+;; 1(1*3) + 1/(5*7) + 1/(9*11) + ... を計算(π/8に収束する
+(define (pi-sum a b)
+  (if (> a b)
+      0
+      (+ (/ 1.0 (* a (+ a 2)))
+         (pi-sum (+ a 4) b))))
+
+;; これらの手続きには同様のパターンがみられる
+;; (define (<name> a b)
+;;    (if (> a b)
+;;        0
+;;        (+ (<term> a)
+;;           (<name> (<next> a) b))))
+
+;; 「特定の総和を計算する手続き」から「総和という概念そのもの」を抽象化して表現する
+(define (sum term a next b)
+  (if (> a b)
+      0
+      (+ (term a)
+         (sum term (next a) next b))))
+
+(define (inc x) (+ x 1))
+(define (cube x) (* x x x))
+(define (sum-cubes a b)
+  (sum cube a inc b))
+
+(sum-cubes 1 10) ; 3025
+
+(define (identity x) x)
+(define (sum-integer a b)
+  (sum identity a inc b))
+
+(sum-integer 1 10) ; 55
+
+(define (pi-sum a b)
+  (define (pi-term x)
+    (/ 1.0 (* x (+ x 2))))
+  (define (pi-next x)
+    (+ x 4))
+  (sum pi-term a pi-next b))
+
+(* 8 (pi-sum 1 1000)) ; 3.139592655589783
+
+;; sum を定義することによって別の概念（定積分）の近似が定義できる
+(define (integral f a b dx)
+  (define (add-dx x)
+    (+ x dx))
+  (* (sum f (+ a (/ dx 2.0)) add-dx b) dx))
+
+(integral cube 0 1 0.01)  ; 0.24998750000000042
+(integral cube 0 1 0.001) ; 0.249999875000001
+;; 0 から 1 の cube の正確な定積分は 1/4
