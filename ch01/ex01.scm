@@ -754,3 +754,10 @@
   (filtered-accumulate filter combiner 1 term 1 next n))
 
 (gcd-sum 10) ; 189
+
+;;; 1.34
+(define (f g) (g 2))
+
+(f square) ; 4
+(f (lambda (z) (* z (+ z 1)))) ; 6
+(f f) ; invalid application (2 2)
