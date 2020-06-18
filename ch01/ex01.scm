@@ -841,3 +841,61 @@
 ;; 4.5555465521473675
 ;; 4.555537551999825
 ;; 4.555537551999825
+
+;;; 1.37
+;; 1.37 a
+(define (cont-frac n d k)
+  (define (cont-frac-rep i result)
+    (if (= i k)
+        result
+        (cont-frac-rep (+ i 1) (/ (n i) (+ (d i) result)))))
+  (cont-frac-rep 1 0))
+
+(cont-frac (lambda (i) 1.0)
+           (lambda (i) 1.0)
+           10) ; 0.6181818181818182
+(cont-frac (lambda (i) 1.0)
+           (lambda (i) 1.0)
+           11) ; 0.6179775280898876
+
+;; 1.37 b
+(define (cont-frac n d k)
+  (define (cont-frac-iter i)
+    (if (= i k)
+        (/ (n i) (d i))
+        (/ (n i) (+ (d i) (cont-frac-iter (+ i 1))))))
+  (cont-frac-iter 1))
+
+(cont-frac (lambda (i) 1.0)
+           (lambda (i) 1.0)
+           10) ; 0.6179775280898876
+(cont-frac (lambda (i) 1.0)
+           (lambda (i) 1.0)
+           11) ; 0.6180555555555556
+
+;;; 1.38
+;; e = 2.71828182846...
+;; D について
+;;  i mod 3 = 2 のとき i - ((i-2)/3) <- i - (i/3) で間違えた
+;;  それ以外は 1
+(+ (cont-frac (lambda (i) 1.0)
+           (lambda (i) (if (= (remainder i 3) 2) (- i (/ (- i 2)  3))
+                           1.0))
+           10)
+   2) ; 2.7182817182817183
+
+;;; 1.39
+(define (cont-frac n d k)
+  (define (cont-frac-iter i)
+    (if (= i k)
+        (/ (n i) (d i))
+        (/ (n i) (- (d i) (cont-frac-iter (+ i 1)))))) ;; 減算
+  (cont-frac-iter 1))
+(define (tan-cf x k)
+  (cont-frac (lambda (i) (if (= i 1)
+                             x
+                             (* x x)))
+             (lambda (i) (- (* i 2) 1)) ;; 1, 3, 5, ... -> 2i - 1
+             k))
+
+(tan-cf 1.0 10) ; 1.557407724654902
