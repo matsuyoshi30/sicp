@@ -339,3 +339,123 @@ size ; 2
 (integral cube 0 1 0.01)  ; 0.24998750000000042
 (integral cube 0 1 0.001) ; 0.249999875000001
 ;; 0 から 1 の cube の正確な定積分は 1/4
+
+
+;;; 1.3.2 Constructing Procedures Using Lambda
+(define (sum term a next b)
+  (if (> a b)
+      0
+      (+ (term a)
+         (sum term (next a) next b))))
+;; から pi-sum を定義するとき、補助手続きをいちいち作成しているのがだるい
+;; -> 特殊形式の lambda を使用する
+(define (pi-sum a b)
+  (define (pi-term x)
+    (/ 1.0 (* x (+ x 2))))
+  (define (pi-next x)
+    (+ x 4))
+  (sum pi-term a pi-next b))
+;; が
+(define (pi-sum a b)
+  (sum (lambda (x) (/ 1.0 (* x (+ x 2))))
+       a
+       (lambda (x) (+ x 4))
+       b))
+;; と書ける
+;; (lambda (<formal-parameters>) (<body))
+;; という形で無形の手続きを作る事ができる
+
+;; let を使って局所変数を作るやり方
+;; f(x,y) = x * (1 + x*y)^2 + y * (1 - y) + (1 + xy) * (1 - y)
+;; を定義したいとき
+(define (f x y)
+  (define (f-helper a b)
+    (+ (* x (square a))
+       (* y b)
+       (* a b)))
+  (f-helper (+ 1 (* x y))
+            (- 1 y)))
+;; lambda を使うと
+(define (f x y)
+  ((lambda (a b)
+     (+ (* x (square a))
+        (* y b)
+        (* a b)))
+   (+ 1 (* x y))
+   (- 1 y)))
+;; let を使うと
+(define (f x y)
+  (let ((a (+ 1 (* x y)))
+        (b (- 1 y)))
+    (+ (* x (square a))
+       (* y b)
+       (* a b))))
+;; (let (<var1> <exp1>)
+;;      (<var2> <exp2>)
+;; ...
+;;   (<body>))
+;; let 式で定義された変数のスコープは let 本体内
+
+;;; 1.3.3 Procedures as General Methods
+;; 関数の零点、不動点を見つける汎用的な手法について検討
+
+;; 区間二分法によって方程式の根を求める
+;; f という連続関数について f(x) = 0 の根を求める
+;; f(a) < 0 < f(b) となるような a,b について平均を x と置いて f(x) を計算する
+;; f(x) < 0 なら f(x) < 0 < f(b)、f(x) > 0 なら f(a) < 0 < f(x) として計算を繰り返して零点を持つ区間を狭くしていく
+(define (search f neg-point pos-point)
+  (let ((mid-point (average neg-point pos-point)))
+    (if (close-enough? neg-point pos-point)
+        mid-point
+        (let ((test-value (f mid-point)))
+          (cond ((positive? test-value)
+                 (search f neg-point mid-point))
+                ((negative? test-value)
+                 (search f mid-point pos-point))
+                (else mid-point))))))
+
+(define (average x y) (/ (+ x y) 2.0))
+(define (close-enough? x y) (< (abs (- x y)) 0.001))
+(define (positive? x) (> x 0))
+(define (negative? x) (< x 0))
+
+;; search が正負の値でなく符号が同じ値を受け取ったときに正しくない結果が帰ってくるので、下記の手続きを経由して使用する
+(define (half-interval-method f a b)
+  (let ((a-val (f a))
+        (b-val (f b)))
+    (cond ((and (negative? a-val) (positive? b-val))
+           (search f a b))
+          ((and (positive? a-val) (negative? b-val))
+           (search f b a))
+          (else (error "Values are not of opposite sign" a b)))))
+
+(half-interval-method sin 2.0 4.0) ; 3.14111328125
+(half-interval-method (lambda (x) (- (* x x x) (* 2 x) 3)) 1.0 2.0) ; 1.89306640625
+
+;; 関数の不動点を求める
+;; 数値 x が f(x) = x を満たすとき、x は関数 f(x) の不動点であるという
+;; 最初の推定値からはじめて、値が変わらなくなるまで繰り返し f を適用していくというやり方
+;; f(x), f(f(x)), f(f(f(x))), ...
+(define tolerance 0.00001)
+(define (fixed-point f first-guess)
+  (define (close-enough? v1 v2)
+    (< (abs (- v1 v2)) tolerance))
+  (define (try guess)
+    (let ((next (f guess)))
+      (if (close-enough? guess next)
+          next
+          (try next))))
+  (try first-guess))
+
+(fixed-point cos 1.0) ; 0.7390822985224023
+(fixed-point (lambda (y) (+ (sin y) (cos y))) 1.0) ; 1.2587315962971173
+
+;; 平方根の探索を同様の手続きで実施しようと思ってもできない
+(define (sqrt x)
+  (fixed-point (lambda (y) (/ x y)) 1.0))
+;; これは最初の推定値から次の推定値、その次の推定値、、、がふたつの推定値の繰り返しになって収束しないため
+
+;; 振動（推定値の繰り返し）をコントロールするには、推定値から大きな変化を防ぐようにする
+;; 上の例では、求めたい解はふたつの推定値の間にあることがわかっているので、関数を平均を取るものに変える
+(define (sqrt x)
+  (fixed-point (lambda (y) (average y (/ x y))) 1.0))
