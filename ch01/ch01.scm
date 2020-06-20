@@ -459,3 +459,68 @@ size ; 2
 ;; 上の例では、求めたい解はふたつの推定値の間にあることがわかっているので、関数を平均を取るものに変える
 (define (sqrt x)
   (fixed-point (lambda (y) (average y (/ x y))) 1.0))
+
+;;; 1.3.4 Procedures as Returned Values
+;; 平均緩和法を考える
+(define (average x y) (/ (+ x y) 2))
+(define (average-damp f)
+  (lambda (x) (average x (f x))))
+;; average-damp は、関数 f を引数に取り、lambda で生成された手続きを返す手続き
+;; 返り値の手続きは、x に値を渡すと、x と f(x) の平均を返すというもの
+;; average-damp を使って平方根を求める手続き sqrt を定義する
+(define (sqrt x)
+  (fixed-point (average-damp (lambda (y) (/ x y)))
+               1.0))
+
+(sqrt 4.0)  ; 2.000000000000002
+(sqrt 20.0) ; 4.47213595500161
+
+;; 不動点探索、平均緩和法、写像（lambda (y) (/ x y)）という考え方が反映されている
+;; 1.1.7 の例と比べると、同じプロセスを表現しているものの、抽象化の度合いに差があって考え方がより一般的により明確になっている
+;; たとえばこのあと三乗根の手続きを定義したいときは、x の三乗根が y->x/y^2 の不動点であることに着目し、
+(define (cube-root x)
+  (fixed-point (average-damp (lambda (y) (/ x (square y))))
+               1.0))
+;; と拡張できる
+
+;; ニュートン法
+;; 微分 = 平均緩和法と同様に、ある関数を別の関数に変形するもの
+;; g が関数で小さな値を dx と置くと、g を微分した Dg は任意の x に対して以下の様になる関数
+;; Dg(x) = (g(x + dx) - g(x)) / dx
+;; dx を 0.00001 として微分の手続きを考えると
+(define (deriv g)
+  (define dx 0.00001)
+  (lambda (x) (/ (- (g (+ x dx)) (g x)) dx)))
+
+;; x^3 伸び分は 3 * x^2
+(define (cube x) (* x x x))
+((deriv cube) 5) ;  75.00014999664018 (3 * 25)
+
+;; deriv を使用して不動点探索プロセスの手続きとしてニュートン法を定義する
+(define (newton-transform g)
+  (lambda (x) (- x (/ (g x) ((deriv g) x)))))
+(define (newton-method g guess) ;; 零点を見つけたい手続きと初期推測値
+  (fixed-point (newton-transform g) guess))
+
+;; x の平方根は y->y^2-x 関数の零点をニュートン法によって求めることで解決できる
+(define (sqrt x)
+  (newton-method (lambda (y) (- (* y y) x)) 1.0))
+
+(sqrt 2.0) ; 1.4142135623822438
+
+;; 抽象化とファーストクラス手続き
+;; 不動点探索もニュートン法も、ある関数から別の関数に変形するという点で考え方が共通している
+;; -> 抽象化した手続きを定義できる
+(define (fixed-point-of-transform g transform guess) ;; 引数としての手続き g 、g を変形する transform、初期推測値
+  (fixed-point (transform g) guess))
+;; 平方根を求める手続きを考える
+;; 平均緩和法に対して不動点を求める y->x/y
+(define (sqrt x)
+  (fixed-point-of-transform
+   (lambda (y) (/ x y)) average-damp 1.0))
+;; ニュートン法によって不動点を求める y->y^2-x
+(define (sqrt x)
+  (fixed-point-of-transform
+   (lambda (y) (- (* y y) x)) newton-transform 1.0))
+
+;; 抽象化の糸口を常に意識しつつ、タスクに対して適切なレベル感で抽象化を適用する

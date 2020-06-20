@@ -899,3 +899,212 @@
              k))
 
 (tan-cf 1.0 10) ; 1.557407724654902
+
+;;; 1.40
+(define tolerance 0.00001)
+(define (fixed-point f first-guess)
+  (define (close-enough? v1 v2)
+    (< (abs (- v1 v2)) tolerance))
+  (define (try guess)
+    (let ((next (f guess)))
+      (if (close-enough? guess next)
+          next
+          (try next))))
+  (try first-guess))
+
+(define (deriv g)
+  (define dx 0.00001)
+  (lambda (x) (/ (- (g (+ x dx)) (g x)) dx)))
+(define (newton-transform g)
+  (lambda (x) (- x (/ (g x) ((deriv g) x)))))
+(define (newton-method g guess)
+  (fixed-point (newton-transform g) guess))
+
+(define (cubic a b c)
+  (lambda (x) (+ (* x x x)
+                 (* a (* x x))
+                 (* b x)
+                 c)))
+
+(newton-method (cubic -2 -11 12) 1.0) ; 1.0
+
+;;; 1.41
+(define (double g)
+  (lambda (x) (g (g x))))
+
+(define (inc x) (+ x 1))
+(((double (double double)) inc) 5)
+;; D  = double
+;; DD = (double double)
+;; (((D (D D)) inc) 5)
+;; (((D DD) inc) 5)
+;; ((DD (DD inc)) 5)
+;; ((DD (D (D inc))) 5)
+;; ((DD (D (lambda (x) (+ 2 x)))) 5)
+;; ((DD (lambda (x) (+ 4 x))) 5)
+;; (D (lambda (x) (+ 8 x)) 5)
+;; ((lambda (x) (+ 16 x)) 5)
+;; (+ 16 5)
+;; 21
+
+;;; 1.42
+(define (compose f g)
+  (lambda (x) (f (g x))))
+(define (inc x) (+ x 1))
+(define (square x) (* x x))
+
+((compose square inc) 6)
+;; (square (inc 6))
+;; (square 7)
+;; 49
+
+;;; 1.43
+(define (repeated f n)
+  (if (= n 1)
+      (lambda (x) (f x))
+      (compose f (repeated f (- n 1)))))
+
+((repeated square 2) 5)
+;; (square (square 5))
+;; (square 25)
+;; 625
+
+;;; 1.44
+(define (smooth f)
+  (define dx 0.00001)
+  (lambda (x) (/ (+ (f (- x dx)) (f x) (f (+ x dx))) 3)))
+
+(define (n-smooth f n)
+  ((repeated smooth n) f))
+
+;;; 1.45
+(define (fixed-point f first-guess)
+  (define tolerance 0.00001)
+  (define (close-enough? v1 v2)
+    (< (abs (- v1 v2)) tolerance))
+  (define (try guess)
+    (let ((next (f guess)))
+      (if (close-enough? guess next)
+          next
+          (try next))))
+  (try first-guess))
+(define (average-damp f)
+  (define (average x y) (/ (+ x y) 2))
+  (lambda (x) (average x (f x))))
+(define (compose f g)
+  (lambda (x) (f (g x))))
+(define (repeated f n)
+  (if (= n 1)
+      (lambda (x) (f x))
+      (compose f (repeated f (- n 1)))))
+
+;; 平均緩和の回数を確認する
+;; (expt x n) => x^n を求める
+(define (nth-root x n count)
+  (fixed-point ((repeated average-damp count) (lambda (y) (/ x (expt y (- n 1)))))
+               1.0))
+;; x = 3
+;; 三乗根
+(nth-root (expt 3 3) 3 1) ; 2.9999972321057697
+(nth-root (expt 3 3) 3 2) ; 3.000001464168659
+;; -> 1回
+;; 四乗根
+(nth-root (expt 3 4) 4 1) ; かえってこない
+(nth-root (expt 3 4) 4 2) ; 3.000000000000033
+;; -> 2回
+;; 五乗根
+(nth-root (expt 3 5) 5 2) ; 3.0000008877496294
+(nth-root (expt 3 5) 5 3) ; 3.000003432225565
+;; -> 2回
+;; 六乗根
+(nth-root (expt 3 6) 6 2) ; 2.999996785898161
+(nth-root (expt 3 6) 6 3) ; 3.000001570305295
+;; -> 3回
+;; 七乗根
+(nth-root (expt 3 7) 7 3) ; 3.00000030154881
+(nth-root (expt 3 7) 7 4) ; 3.000009458632985
+;; -> 3回
+;; 八乗根
+(nth-root (expt 3 8) 8 3) ; 3.0000000000173292
+(nth-root (expt 3 8) 8 4) ; 3.000007243280675
+;; -> 3回
+;; 九乗根
+(nth-root (expt 3 9) 9 3) ; 2.9999993492954617
+(nth-root (expt 3 9) 9 4) ; 3.000004241187395
+;; -> 3回
+;; 十乗根
+(nth-root (expt 3 10) 10 3) ; 2.9999982624745742
+(nth-root (expt 3 10) 10 4) ; 3.000003467126666
+;; -> 3回
+;; 十一乗根
+(nth-root (expt 3 11) 11 3) ; 3.000002135562327
+(nth-root (expt 3 11) 11 4) ; 3.0000041664726727
+;; -> 3回
+;; 十二乗根
+(nth-root (expt 3 12) 12 3) ; 3.000003243693911
+(nth-root (expt 3 12) 12 4) ; 3.000002000091472
+;; -> 4回
+
+;; n 乗根の計算のために必要な平均緩和法の回数は、
+;; 2 を底とした log n の切り上げと推測できる
+;; 参考：https://deltam.blogspot.com/2015/08/sicp145ex145.html
+
+(define (nroot x n)
+  (fixed-point ((repeated average-damp (ceiling (log n 2)))
+                (lambda (y) (/ x (expt y (- n 1)))))
+               1.0))
+
+(nroot 2 2) ; 1.4142135623746899
+(nroot 27 3) ; 3.000001464168659
+(nroot 1024 10) ; 2.0000044972691784
+
+;;; 1.46
+;; 反復改良法：最初に推測値を与えて、テストによって推測値を改良していく方法。改良した推測値はまたテストの引数となって検査される。
+;; 推測値が十分かどうかを判定する手続き enough? と、推測値を改善する手続き improve を引数に取る
+(define (iterative-improve enough? improve)
+  (define (iter guess)
+    (if (enough? guess)
+        guess
+        (iter (improve guess))))
+  (lambda (guess) (iter guess)))
+
+;; sqrt
+;; before
+(define (improve guess x) (average guess (/ x guess)))
+(define (average x y) (/ (+ x y) 2))
+(define (good-enough? guess x)
+  (< (abs (- (square guess) x)) 0.001))
+(define (sqrt-iter guess x)
+  (if (good-enough? guess x)
+      guess
+      (sqrt-iter (improve guess x) x)))
+(define (sqrt x)
+  (sqrt-iter 1.0 x))
+;; after
+(define (sqrt x)
+  (define (enough? guess)
+    (< (abs (- (square guess) x)) 0.001)) ;; 推測値の検査
+  (define (improve guess)
+    (average guess (/ x guess))) ;; 推測値の改善
+  ((iterative-improve enough? improve) 1.0))
+
+(sqrt 2) ; 1.4142156862745097
+
+;; fixed-point
+;; before
+(define (fixed-point f first-guess)
+  (define tolerance 0.00001)
+  (define (close-enough? v1 v2)
+    (< (abs (- v1 v2)) tolerance))
+  (define (try guess)
+    (let ((next (f guess)))
+      (if (close-enough? guess next)
+          next
+          (try next))))
+  (try first-guess))
+;; after
+(define (fixed-point f first-guess)
+  (define (enough? guess)
+    (< (abs (- guess (f guess))) 0.00001)) ;; 推測値の検査
+  (define (improve guess) (f guess)) ;; 推測値の改善 = f
+  ((iterative-improve enough? improve) 1.0))
